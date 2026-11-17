@@ -1,0 +1,23 @@
+# Build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local / personal Claude settings (team settings in .claude/settings.json ARE committed)
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Secrets / local config
+*.env
+application-local.properties
