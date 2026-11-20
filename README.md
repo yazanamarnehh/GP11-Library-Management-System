@@ -35,7 +35,7 @@ Requires JDK 21+.
 ```
 
 ## Architecture and diagrams
-
+|---|---|
 | Diagram | Description |
 | [C4 System Context](uml/rendered/c4-context.png) | High-level actors (Guest, Member, Librarian, Admin) and simulated Email Service |
 | [C4 Container](uml/rendered/c4-container.png) | Browser, Spring Boot/Thymeleaf app with internal scheduler, and PostgreSQL |
