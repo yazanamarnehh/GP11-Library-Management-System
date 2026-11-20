@@ -1,0 +1,272 @@
+@startuml class-domain
+title GP11 Library Management System - Domain Class Diagram (v0.1.0-design)
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 60
+hide empty members
+
+' Names follow the glossary in docs/project_description.md section 6.
+' Requirement IDs are noted in the notes and in docs/domain_model.md.
+
+package "catalog" {
+  class Title {
+    - id : Long
+    - isbn : String
+    - title : String
+    - publisher : String
+    - publicationYear : int
+    - description : String
+    - replacementPrice : BigDecimal
+    - active : boolean
+    + availableCopyCount() : int
+    + canDeactivate() : boolean
+    + deactivate() : void
+  }
+
+  class Author {
+    - id : Long
+    - name : String
+  }
+
+  class Category {
+    - id : Long
+    - name : String
+  }
+
+  class BookCopy {
+    - id : Long
+    - barcode : String
+    - shelfLocation : String
+    - status : CopyStatus
+    + isAvailable() : boolean
+    + changeStatus(newStatus : CopyStatus) : void
+  }
+
+  enum CopyStatus {
+    AVAILABLE
+    ON_LOAN
+    ON_HOLD
+    LOST
+    DAMAGED
+    WITHDRAWN
+  }
+}
+
+package "security" {
+  class UserAccount {
+    - id : Long
+    - email : String
+    - passwordHash : String
+    - role : Role
+    - enabled : boolean
+    - createdAt : LocalDateTime
+    + disable() : void
+    + enable() : void
+    + changePassword(newHash : String) : void
+  }
+
+  enum Role {
+    MEMBER
+    LIBRARIAN
+    ADMIN
+  }
+}
+
+package "member" {
+  class Member {
+    - id : Long
+    - memberNumber : String
+    - fullName : String
+    - phone : String
+    - membershipExpiry : LocalDate
+    - suspended : boolean
+    + isMembershipValid(today : LocalDate) : boolean
+    + isEligibleToBorrow(today : LocalDate) : boolean
+    + suspend() : void
+    + reactivate() : void
+    + renewMembership(newExpiry : LocalDate) : void
+  }
+}
+
+package "circulation" {
+  class Loan {
+    - id : Long
+    - checkoutDate : LocalDate
+    - dueDate : LocalDate
+    - returnDate : LocalDate
+    - renewalCount : int
+    - status : LoanStatus
+    - checkedOutAt : LocalDateTime
+    - returnedAt : LocalDateTime
+    - lastRenewedAt : LocalDateTime
+    + isOverdue(today : LocalDate) : boolean
+    + daysOverdue(today : LocalDate) : int
+    + canRenew(policy : LendingPolicy) : boolean
+    + renew(policy : LendingPolicy) : void
+    + close(returnDate : LocalDate) : void
+    + markLost() : void
+  }
+
+  enum LoanStatus {
+    ACTIVE
+    OVERDUE
+    RETURNED
+    LOST
+  }
+}
+
+package "reservation" {
+  class Reservation {
+    - id : Long
+    - createdAt : LocalDateTime
+    - status : ReservationStatus
+    - readyAt : LocalDateTime
+    - holdExpiresAt : LocalDateTime
+    + queuePosition() : int
+    + markReady(copy : BookCopy, policy : LendingPolicy) : void
+    + fulfill() : void
+    + cancel() : void
+    + expire() : void
+    + isHoldExpired(now : LocalDateTime) : boolean
+  }
+
+  enum ReservationStatus {
+    WAITING
+    READY
+    FULFILLED
+    CANCELLED
+    EXPIRED
+  }
+}
+
+package "fine" {
+  class Fine {
+    - id : Long
+    - fineType : FineType
+    - amount : BigDecimal
+    - status : FineStatus
+    - createdAt : LocalDateTime
+    - waiveReason : String
+    - waivedAt : LocalDateTime
+    + outstanding() : BigDecimal
+    + applyPayment(amount : BigDecimal) : void
+    + waive(reason : String) : void
+  }
+
+  class Payment {
+    - id : Long
+    - amount : BigDecimal
+    - paidAt : LocalDateTime
+  }
+
+  enum FineStatus {
+    UNPAID
+    PAID
+    WAIVED
+  }
+
+  enum FineType {
+    OVERDUE
+    LOST
+  }
+}
+
+package "notification" {
+  class Notification {
+    - id : Long
+    - notificationType : NotificationType
+    - message : String
+    - createdAt : LocalDateTime
+    - read : boolean
+    + markRead() : void
+  }
+
+  enum NotificationType {
+    DUE_SOON
+    OVERDUE
+    HOLD_READY
+  }
+}
+
+package "config" {
+  class LendingPolicy <<value object>> {
+    - loanPeriodDays : int = 14
+    - maxActiveLoans : int = 5
+    - maxRenewals : int = 2
+    - renewalPeriodDays : int = 14
+    - finePerDay : BigDecimal = 0.250
+    - fineBlockThreshold : BigDecimal = 5.000
+    - holdPeriodDays : int = 3
+    - maxActiveReservations : int = 3
+    - dueSoonDays : int = 2
+    + dueDateFrom(start : LocalDate) : LocalDate
+    + overdueFine(daysLate : int, cap : BigDecimal) : BigDecimal
+  }
+}
+
+' ---------- Catalog ----------
+Title "*" -- "1..*" Author : written by >
+Title "*" -- "1" Category : classified in >
+Title "1" *-- "0..*" BookCopy : has >
+BookCopy ..> CopyStatus
+
+' ---------- Accounts ----------
+Member "1" -- "1" UserAccount : logs in with >
+UserAccount ..> Role
+
+' ---------- Circulation ----------
+Member "1" -- "0..*" Loan : borrows >
+BookCopy "1" -- "0..*" Loan : lent in >
+Loan ..> LoanStatus
+Loan ..> LendingPolicy : uses
+
+' ---------- Reservations ----------
+Member "1" -- "0..*" Reservation : places >
+Title "1" -- "0..*" Reservation : reserved for >
+Reservation "0..1" -- "0..1" BookCopy : holds >
+Reservation ..> ReservationStatus
+
+' ---------- Fines ----------
+Loan "1" -- "0..1" Fine : may incur >
+Member "1" -- "0..*" Fine : owes >
+Fine "1" *-- "0..*" Payment : settled by >
+Fine ..> FineStatus
+Fine ..> FineType
+
+' ---------- Notifications ----------
+Member "1" -- "0..*" Notification : receives >
+Notification ..> NotificationType
+
+' ---------- Audit (NFR-09): who performed the action ----------
+Loan "0..*" -- "1" UserAccount : checkedOutBy
+Loan "0..*" -- "0..1" UserAccount : returnedBy / lastRenewedBy
+Fine "0..*" -- "1" UserAccount : createdBy / waivedBy
+Payment "0..*" -- "1" UserAccount : recordedBy
+
+note bottom of Loan
+  Active loan = ACTIVE or OVERDUE.
+  A copy has at most one active loan (NFR-03).
+  Due date = checkout + BR-01; renew rules BR-03.
+end note
+
+note bottom of Reservation
+  FIFO queue per Title by createdAt (FR-22).
+  Holds a copy only while READY (FR-23, BR-06).
+  Max 3 active per member (BR-09).
+end note
+
+note bottom of Fine
+  OVERDUE fine per BR-04 (FR-27);
+  LOST fine = replacement price (BR-08, FR-28).
+  Partial payments keep status UNPAID until
+  outstanding() = 0 (FR-29, BR-05).
+end note
+
+note bottom of LendingPolicy
+  Defaults from BR-01..BR-06, BR-10.
+  Editable by ADMIN (FR-34).
+end note
+
+@enduml

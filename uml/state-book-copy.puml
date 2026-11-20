@@ -1,0 +1,62 @@
+@startuml state-book-copy
+title BookCopy - State Diagram (CopyStatus)
+
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #FDFDFD
+  BorderColor #444444
+}
+
+' States are exactly the CopyStatus enum values from the glossary.
+' Each transition label: trigger [requirement] / guard.
+
+[*] --> AVAILABLE : add copy [FR-03]
+
+state AVAILABLE
+state ON_LOAN
+state ON_HOLD
+state LOST
+state DAMAGED
+state WITHDRAWN
+
+AVAILABLE --> ON_LOAN : checkout [FR-13, FR-14]
+
+ON_LOAN --> AVAILABLE : return, no reservation waiting [FR-17]
+ON_LOAN --> ON_HOLD : return, reservation waiting [FR-17, FR-23]
+ON_LOAN --> LOST : mark lost [FR-20]
+
+ON_HOLD --> ON_LOAN : checkout to member of READY reservation [FR-26]
+ON_HOLD --> ON_HOLD : hold expired, next WAITING reservation [FR-24]
+ON_HOLD --> AVAILABLE : hold expired or cancelled, queue empty [FR-24, FR-25]
+
+AVAILABLE --> DAMAGED : librarian sets status [FR-04]
+AVAILABLE --> LOST : librarian sets status [FR-04]
+AVAILABLE --> WITHDRAWN : librarian sets status [FR-04]
+
+DAMAGED --> AVAILABLE : librarian restores [FR-04]
+LOST --> AVAILABLE : librarian restores (copy found) [FR-04]
+WITHDRAWN --> AVAILABLE : librarian restores [FR-04]
+
+note right of AVAILABLE
+  Counted in Title.availableCopyCount() (FR-05).
+  Only state from which checkout is allowed (FR-13).
+end note
+
+note bottom of ON_LOAN
+  Exactly one active Loan (ACTIVE or OVERDUE)
+  references the copy (NFR-03).
+  FR-04 changes are refused in ON_LOAN and ON_HOLD.
+end note
+
+note bottom of ON_HOLD
+  Exactly one READY Reservation holds the copy.
+  Only that member may borrow it (FR-26).
+end note
+
+note bottom of DAMAGED
+  DAMAGED, LOST and WITHDRAWN may also be changed
+  to one another by the librarian [FR-04].
+  None of them can be lent or held.
+end note
+
+@enduml
