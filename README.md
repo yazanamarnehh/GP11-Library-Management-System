@@ -35,6 +35,7 @@ Requires JDK 21+.
 ```
 
 ## Architecture and diagrams
+
 |---|---|
 | Diagram | Description |
 | [C4 System Context](uml/rendered/c4-context.png) | High-level actors (Guest, Member, Librarian, Admin) and simulated Email Service |
