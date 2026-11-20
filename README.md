@@ -38,7 +38,9 @@ Requires JDK 21+.
 
 | Diagram | Description |
 |---|---|
-| _TBD_ | _Added from the first design checkpoint (see `uml/`)_ |
+| [Use case diagram](uml/use-case.puml) (3 pages) | All actors and use cases UC-01–UC-32 with include/extend; descriptions in [docs/use_cases.md](docs/use_cases.md) |
+| [Sequence: catalog search](uml/seq-catalog-search.puml) | Guest searches the catalog; controller → service → repository → PostgreSQL (FR-05) |
+| [Sequence: add copy](uml/seq-catalog-add-copy.puml) | Librarian adds a copy, including the duplicate-barcode error (FR-03) |
 
 ## Repository structure
 
