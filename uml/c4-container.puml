@@ -1,0 +1,30 @@
+@startuml c4-container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram (C4 Level 2) — GP11 Library Management System
+
+Person(guest, "Guest", "Unauthenticated catalog visitor.")
+Person(member, "Member", "Registered library patron.")
+Person(librarian, "Librarian", "Circulation and catalog staff.")
+Person(admin, "Administrator", "Staff and policy administrator.")
+
+System_Boundary(lms_boundary, "Library Management System") {
+    Container(browser, "Web Browser", "HTML5 / CSS / Server-rendered Thymeleaf", "Delivers catalog search, circulation workflows, member dashboards, and admin pages (NFR-08).")
+    Container(webapp, "Spring Boot Web Application", "Java 21, Spring Boot 4.1, Thymeleaf, Spring Security", "Handles HTTP requests, enforces role-based authorization (NFR-01), executes layered business logic (NFR-06), runs the daily internal Scheduler (FR-18, FR-24, FR-31), and runs the Notification Adapter.")
+    ContainerDb(db, "PostgreSQL Database", "PostgreSQL 16 + Flyway", "Stores titles, copies, members, accounts, loans, reservations, fines, payments, audit trails, and simulated notifications (NFR-03, NFR-04, NFR-09).")
+}
+
+System_Ext(email, "Email Service (Simulated)", "Logical external notification channel; implemented locally by persisting notification records in PostgreSQL.")
+
+Rel(guest, browser, "Browses and searches catalog", "HTTPS")
+Rel(member, browser, "Manages loans, reservations, fines, and profile", "HTTPS")
+Rel(librarian, browser, "Runs catalog, member, circulation, fine, and report workflows", "HTTPS")
+Rel(admin, browser, "Manages staff accounts and lending policy", "HTTPS")
+
+Rel(browser, webapp, "Submits form requests and receives rendered Thymeleaf HTML", "HTTP/HTTPS")
+Rel(webapp, db, "Reads and writes domain data, transactions, and Flyway migrations", "JDBC / Spring Data JPA (NFR-03, NFR-04)")
+Rel(webapp, email, "Notification Adapter writes simulated email notices to DB", "Simulated / DB Write (FR-23, FR-31)")
+
+@enduml
