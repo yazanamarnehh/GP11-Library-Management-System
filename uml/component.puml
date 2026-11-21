@@ -45,7 +45,7 @@ package "Feature Packages (Controller -> Service -> Repository, NFR-06)" {
 
     package "reservation [planned v0.6.0]" as pkg_res {
         [ReservationController\n(FR-22..FR-26)] as res_ctrl
-        [ReservationService &\nHoldExpiryScheduler] as res_svc
+        [ReservationService &\nHoldExpiryScheduler\n(allocates holds, FR-23)] as res_svc
         [ReservationRepository] as res_repo
         res_ctrl --> res_svc
         res_svc --> res_repo
@@ -60,7 +60,7 @@ package "Feature Packages (Controller -> Service -> Repository, NFR-06)" {
     }
 
     package "notification [planned v0.8.0]" as pkg_notif {
-        [NotificationController\n(FR-23, FR-31)] as notif_ctrl
+        [NotificationController\n(FR-31)] as notif_ctrl
         [NotificationService &\nDueSoonScheduler] as notif_svc
         [SimulatedNotificationAdapter /\nNotificationRepository] as notif_repo
         notif_ctrl --> notif_svc
@@ -68,16 +68,36 @@ package "Feature Packages (Controller -> Service -> Repository, NFR-06)" {
     }
 
     package "report [planned v0.8.0]" as pkg_rep {
-        [ReportController\n(FR-32..FR-34)] as rep_ctrl
-        [ReportService &\nLendingPolicyService] as rep_svc
-        [ReportRepository /\nLendingPolicyRepository] as rep_repo
+        [ReportController\n(FR-32, FR-33)] as rep_ctrl
+        [ReportService] as rep_svc
+        [ReportRepository] as rep_repo
         rep_ctrl --> rep_svc
         rep_svc --> rep_repo
+    }
+
+    package "config [policy v0.3.0, admin UI v0.8.0]" as pkg_config {
+        [LendingPolicyController\n(FR-34, ADMIN only)] as pol_ctrl
+        [LendingPolicyService\n(BR-01..BR-06, BR-09, BR-10)] as pol_svc
+        [LendingPolicyRepository] as pol_repo
+        pol_ctrl --> pol_svc
+        pol_svc --> pol_repo
     }
 }
 
 database "PostgreSQL Database\n(Flyway-managed schema, NFR-04)" as pg
 
+' ---------- Key dependencies between feature packages (service layer) ----------
+mem_svc ..> sec_svc : creates MEMBER account (FR-07)
+circ_svc ..> cat_svc : copy status (FR-13, FR-17)
+circ_svc ..> mem_svc : eligibility (BR-02, BR-05, BR-07)
+circ_svc ..> res_svc : on return: allocate hold (FR-17, FR-23)
+circ_svc ..> fine_svc : overdue / lost fine (FR-27, FR-28)
+res_svc ..> notif_svc : hold ready notice (FR-23)
+circ_svc ..> pol_svc : loan period, renewals (BR-01, BR-03)
+res_svc ..> pol_svc : hold period (BR-06, BR-09)
+fine_svc ..> pol_svc : fine rate (BR-04, BR-05)
+
+' ---------- Cross-cutting security ----------
 sec_cfg ..> pkg_catalog : enforces RBAC
 sec_cfg ..> pkg_member : enforces RBAC
 sec_cfg ..> pkg_circ : enforces RBAC
@@ -85,6 +105,7 @@ sec_cfg ..> pkg_res : enforces RBAC
 sec_cfg ..> pkg_fine : enforces RBAC
 sec_cfg ..> pkg_notif : enforces RBAC
 sec_cfg ..> pkg_rep : enforces RBAC
+sec_cfg ..> pkg_config : enforces RBAC
 
 cat_repo --> pg
 mem_repo --> pg
@@ -93,6 +114,13 @@ res_repo --> pg
 fine_repo --> pg
 notif_repo --> pg
 rep_repo --> pg
+pol_repo --> pg
 sec_repo --> pg
+
+note bottom of pkg_notif
+  Notification only creates and shows messages.
+  Hold allocation (FR-23) is decided in reservation,
+  which then asks notification to send the notice.
+end note
 
 @enduml

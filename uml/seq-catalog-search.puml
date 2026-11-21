@@ -1,0 +1,65 @@
+@startuml seq-catalog-search
+' Sequence diagram — UC-01 Search catalog (FR-05, NFR-02) — v0.1.0-design, Task C
+' Layers follow docs/architecture.md: controller -> service -> repository -> database (NFR-06).
+' Class names must match uml/class-domain.puml (Task D) and uml/component.puml (Task B).
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+title Sequence — UC-01 Search catalog (FR-05)
+
+actor Guest
+participant "Web browser" as Browser
+box "Spring Boot web application — catalog package" #F5F5F5
+  participant "CatalogController" as Ctrl <<controller>>
+  participant "CatalogService" as Svc <<service>>
+  participant "TitleRepository" as Repo <<repository>>
+end box
+database "PostgreSQL" as DB
+
+Guest -> Browser : enter search term,\nchoose type (keyword / ISBN / category)
+Browser -> Ctrl : GET /catalog/search?type=KEYWORD&q=java
+activate Ctrl
+
+Ctrl -> Ctrl : validate input\n(term not empty, ISBN format)
+
+alt input invalid
+  Ctrl --> Browser : search page + error message\n("Please enter a search term" / "Invalid ISBN")
+else input valid
+  Ctrl -> Svc : searchTitles(criteria)
+  activate Svc
+  Svc -> Repo : searchActiveWithAvailability(type, term)
+  activate Repo
+  Repo -> DB : SELECT title, authors, category,\nCOUNT(copies WHERE status = 'AVAILABLE')\nFROM title ... WHERE active = true AND <match>\nGROUP BY title
+  activate DB
+  DB --> Repo : result rows
+  deactivate DB
+  Repo --> Svc : List<TitleSearchResult>
+  deactivate Repo
+  Svc --> Ctrl : List<TitleSearchResult>
+  deactivate Svc
+
+  alt list is empty
+    Ctrl --> Browser : search page with "No titles found"
+  else titles found
+    Ctrl --> Browser : search page (Thymeleaf view "catalog/search")\nwith title, authors, year, category, available copies
+  end
+end
+deactivate Ctrl
+
+Browser --> Guest : show results
+
+note right of Repo
+  One query returns each title with its
+  available-copy count (no query per title),
+  so search stays within 2 s (NFR-02).
+end note
+
+note over Guest, Browser
+  No login needed: any user, including a
+  Guest, may search (FR-05). Member and
+  Librarian follow exactly the same flow.
+end note
+
+@enduml

@@ -1,0 +1,163 @@
+@startuml use-case
+' Use case diagram — WHOLE SYSTEM — GP11 Library Management System (v0.1.0-design, Task C)
+' One source file, three pages (split by subsystem so the diagram stays readable):
+'   page 1 -> rendered/use-case.png      : Catalog + Members and accounts
+'   page 2 -> rendered/use-case_001.png  : Circulation + Reservations
+'   page 3 -> rendered/use-case_002.png  : Fines + Notifications and reports
+' Use case names follow the "Use Case" column of docs/traceability_matrix.md.
+' UC-IDs and FR-IDs are explained in docs/use_cases.md.
+' Notation: solid line = actor takes part in the use case;
+'           <<include>> = always done as part of the base use case;
+'           <<extend>>  = only done when the condition in [ ] holds;
+'           hollow-triangle arrow = generalisation (Member is a kind of Guest).
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam shadowing false
+skinparam usecase {
+  BackgroundColor #FEFEFE
+  BorderColor #555555
+}
+
+title Use Case Diagram (1/3) — Catalog and accounts
+
+actor Guest
+actor Member
+actor Librarian
+actor Administrator
+
+Guest <|-- Member
+
+rectangle "Library Management System" {
+  package "Catalog (v0.1.0)" {
+    usecase "UC-01 Search catalog\n(FR-05)" as UC01
+    usecase "UC-02 View title details\n(FR-06)" as UC02
+    usecase "UC-03 Manage titles\n(FR-01, FR-02)" as UC03
+    usecase "UC-04 Manage copies\n(FR-03, FR-04)" as UC04
+  }
+  package "Members and accounts (v0.2.0)" {
+    usecase "UC-05 Register member\n(FR-07)" as UC05
+    usecase "UC-06 Manage member\n(FR-08)" as UC06
+    usecase "UC-07 Log in / log out\n(FR-09)" as UC07
+    usecase "UC-08 Search members\n(FR-10)" as UC08
+    usecase "UC-09 Manage staff accounts\n(FR-11)" as UC09
+    usecase "UC-10 Change password\n(FR-12)" as UC10
+  }
+}
+
+Guest -- UC01
+Guest -- UC02
+Member -- UC07
+Member -- UC10
+
+UC01 -- Librarian
+UC02 -- Librarian
+UC03 -- Librarian
+UC04 -- Librarian
+UC05 -- Librarian
+UC06 -- Librarian
+UC07 -- Librarian
+UC08 -- Librarian
+
+UC07 -- Administrator
+UC09 -- Administrator
+UC10 -- Administrator
+
+note bottom of UC01
+  Member inherits UC-01 and UC-02
+  from Guest (generalisation).
+end note
+
+newpage
+
+title Use Case Diagram (2/3) — Circulation and reservations
+
+actor Member
+actor Librarian
+actor "Scheduler\n<<system>>" as Scheduler
+
+rectangle "Library Management System" {
+  package "Circulation (v0.3.0 – v0.5.0)" {
+    usecase "UC-11 Check out copy\n(FR-13, FR-14)" as UC11
+    usecase "UC-12 Verify member eligibility\n(BR-02, BR-05, BR-07)" as UC12
+    usecase "UC-13 View my loans\n(FR-15)" as UC13
+    usecase "UC-14 View member loans\n(FR-16)" as UC14
+    usecase "UC-15 Return copy\n(FR-17)" as UC15
+    usecase "UC-16 Detect overdue loans\n(FR-18)" as UC16
+    usecase "UC-17 View overdue loans\n(FR-19)" as UC17
+    usecase "UC-18 Mark copy lost\n(FR-20)" as UC18
+    usecase "UC-19 Renew loan\n(FR-21)" as UC19
+  }
+  package "Reservations (v0.6.0)" {
+    usecase "UC-20 Reserve title\n(FR-22)" as UC20
+    usecase "UC-21 Allocate hold\n(FR-23)" as UC21
+    usecase "UC-22 Expire holds\n(FR-24)" as UC22
+    usecase "UC-23 Manage my reservations\n(FR-25)" as UC23
+    usecase "UC-24 Check out held copy\n(FR-26)" as UC24
+  }
+}
+
+Member -- UC13
+Member -- UC19
+Member -- UC20
+Member -- UC23
+
+UC11 -- Librarian
+UC14 -- Librarian
+UC15 -- Librarian
+UC17 -- Librarian
+UC18 -- Librarian
+UC19 -- Librarian
+
+UC16 -- Scheduler
+UC22 -- Scheduler
+
+UC11 ..> UC12 : <<include>>
+UC19 ..> UC12 : <<include>>
+UC20 ..> UC12 : <<include>>
+UC21 ..> UC15 : <<extend>>\n[a WAITING reservation exists]
+UC24 ..> UC11 : <<extend>>\n[copy is ON_HOLD]
+
+newpage
+
+title Use Case Diagram (3/3) — Fines, notifications and reports
+
+actor Member
+actor Librarian
+actor Administrator
+actor "Scheduler\n<<system>>" as Scheduler
+
+rectangle "Library Management System" {
+  package "Fines (v0.7.0)" {
+    usecase "UC-25 Calculate overdue fine\n(FR-27, BR-04)" as UC25
+    usecase "UC-26 Charge lost copy\n(FR-28, BR-08)" as UC26
+    usecase "UC-27 Record payment / waive fine\n(FR-29)" as UC27
+    usecase "UC-28 View my fines\n(FR-30)" as UC28
+  }
+  package "Notifications and reports (v0.8.0)" {
+    usecase "UC-29 Send notifications\n(FR-31, BR-10)" as UC29
+    usecase "UC-30 View borrowing history\n(FR-32)" as UC30
+    usecase "UC-31 View reports\n(FR-33)" as UC31
+    usecase "UC-32 Configure lending policy\n(FR-34)" as UC32
+  }
+  package "From page 2" {
+    usecase "UC-15 Return copy" as UC15
+    usecase "UC-18 Mark copy lost" as UC18
+    usecase "UC-21 Allocate hold" as UC21
+  }
+}
+
+Member -- UC28
+Member -- UC30
+
+UC27 -- Librarian
+UC31 -- Librarian
+UC32 -- Administrator
+UC29 -- Scheduler
+
+UC25 ..> UC15 : <<extend>>\n[loan is OVERDUE]
+UC18 ..> UC26 : <<include>>
+UC21 ..> UC29 : <<include>>
+
+@enduml

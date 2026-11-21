@@ -1,0 +1,195 @@
+@startuml erd
+title GP11 Library Management System - ERD (PostgreSQL, v0.1.0-design)
+
+hide circle
+skinparam shadowing false
+skinparam linetype ortho
+
+' Tables = persistent classes of uml/class-domain.puml (snake_case).
+' PK = primary key, FK = foreign key, UQ = unique constraint, audit columns per NFR-09.
+
+entity category {
+  * id : bigint <<PK>>
+  --
+  * name : varchar(100) <<UQ>>
+}
+
+entity title {
+  * id : bigint <<PK>>
+  --
+  * isbn : varchar(13) <<UQ>>
+  * title : varchar(255)
+  * publisher : varchar(150)
+  * publication_year : int
+  description : text
+  * replacement_price : numeric(8,3)
+  * active : boolean
+  * category_id : bigint <<FK>>
+}
+
+entity author {
+  * id : bigint <<PK>>
+  --
+  * name : varchar(150)
+}
+
+entity title_author {
+  * title_id : bigint <<PK, FK>>
+  * author_id : bigint <<PK, FK>>
+  --
+  * author_order : int
+}
+
+entity book_copy {
+  * id : bigint <<PK>>
+  --
+  * barcode : varchar(30) <<UQ>>
+  * shelf_location : varchar(50)
+  * status : varchar(20)
+  * title_id : bigint <<FK>>
+}
+
+entity user_account {
+  * id : bigint <<PK>>
+  --
+  * email : varchar(150) <<UQ>>
+  * password_hash : varchar(100)
+  * role : varchar(20)
+  * enabled : boolean
+  * created_at : timestamp
+}
+
+entity member {
+  * id : bigint <<PK>>
+  --
+  * member_number : varchar(20) <<UQ>>
+  * full_name : varchar(150)
+  phone : varchar(30)
+  * membership_expiry : date
+  * suspended : boolean
+  * user_account_id : bigint <<FK, UQ>>
+}
+
+entity loan {
+  * id : bigint <<PK>>
+  --
+  * copy_id : bigint <<FK>>
+  * member_id : bigint <<FK>>
+  * checkout_date : date
+  * due_date : date
+  return_date : date
+  * renewal_count : int
+  * status : varchar(20)
+  --audit (NFR-09)--
+  * checked_out_by : bigint <<FK>>
+  * checked_out_at : timestamp
+  returned_by : bigint <<FK>>
+  returned_at : timestamp
+  last_renewed_by : bigint <<FK>>
+  last_renewed_at : timestamp
+}
+
+entity reservation {
+  * id : bigint <<PK>>
+  --
+  * title_id : bigint <<FK>>
+  * member_id : bigint <<FK>>
+  held_copy_id : bigint <<FK>>
+  * status : varchar(20)
+  * created_at : timestamp
+  ready_at : timestamp
+  hold_expires_at : timestamp
+}
+
+entity fine {
+  * id : bigint <<PK>>
+  --
+  * loan_id : bigint <<FK, UQ>>
+  * member_id : bigint <<FK>>
+  * fine_type : varchar(20)
+  * amount : numeric(8,3)
+  * status : varchar(20)
+  waive_reason : varchar(255)
+  --audit (NFR-09)--
+  * created_at : timestamp
+  * created_by : bigint <<FK>>
+  waived_by : bigint <<FK>>
+  waived_at : timestamp
+}
+
+entity payment {
+  * id : bigint <<PK>>
+  --
+  * fine_id : bigint <<FK>>
+  * amount : numeric(8,3)
+  --audit (NFR-09)--
+  * paid_at : timestamp
+  * recorded_by : bigint <<FK>>
+}
+
+entity notification {
+  * id : bigint <<PK>>
+  --
+  * member_id : bigint <<FK>>
+  * notification_type : varchar(20)
+  * message : varchar(255)
+  * created_at : timestamp
+  * is_read : boolean
+}
+
+entity lending_policy {
+  * id : smallint <<PK, always 1>>
+  --
+  * loan_period_days : int
+  * max_active_loans : int
+  * max_renewals : int
+  * renewal_period_days : int
+  * fine_per_day : numeric(6,3)
+  * fine_block_threshold : numeric(8,3)
+  * hold_period_days : int
+  * max_active_reservations : int
+  * due_soon_days : int
+  updated_by : bigint <<FK>>
+  updated_at : timestamp
+}
+
+' ---------- Relationships (crow's foot) ----------
+category      ||--o{ title        : classifies
+title         ||--o{ title_author : "credits"
+author        ||--o{ title_author : "writes"
+title         ||--o{ book_copy    : has
+user_account  ||--o| member       : "logs in as"
+book_copy     ||--o{ loan         : "lent in"
+member        ||--o{ loan         : borrows
+title         ||--o{ reservation  : "reserved via"
+member        ||--o{ reservation  : places
+book_copy     |o--o| reservation  : "held by (READY)"
+loan          ||--o| fine         : "may incur"
+member        ||--o{ fine         : owes
+fine          ||--o{ payment      : "settled by"
+member        ||--o{ notification : receives
+user_account  |o--o{ lending_policy : "updated_by"
+
+note right of loan
+  NFR-03: a copy has at most one active loan.
+  Partial unique index:
+  CREATE UNIQUE INDEX uq_loan_active_copy
+    ON loan (copy_id)
+    WHERE status IN ('ACTIVE','OVERDUE');
+end note
+
+note right of reservation
+  Partial unique index (one active
+  reservation per member and title):
+  UNIQUE (member_id, title_id)
+    WHERE status IN ('WAITING','READY').
+  held_copy_id is set only while READY.
+end note
+
+note bottom of user_account
+  Audit FKs checked_out_by, returned_by, last_renewed_by,
+  created_by, waived_by, recorded_by, updated_by
+  all reference user_account(id) (NFR-09).
+end note
+
+@enduml

@@ -3,7 +3,7 @@
 This document describes the architecture of the Library Management System across C4 Level 1 (System
 Context), C4 Level 2 (Containers), an application Component View, and the Docker Compose Deployment
 View. Technology choices referenced below are justified in the decisions log in
-[§5–6](#5-technology-decisions).
+[§5–6](#5-technology-choices).
 
 ---
 
@@ -35,16 +35,17 @@ application rather than as an external actor. Outbound notifications (`FR-23`, `
 
 ![C4 Container Diagram](../uml/rendered/c4-container.png)
 
-The system is structured into three logical containers:
+The system consists of two containers. Users reach the application through an ordinary web browser;
+because all pages are rendered on the server (Thymeleaf), the browser runs no application code of its
+own and is therefore not a separate container (C4 convention for server-rendered web apps).
 
-1. **Web Browser** — renders server-generated HTML pages for all user roles, keeping core workflows
-   (search, checkout, return, renew, reserve) reachable within three clicks (`NFR-08`).
-2. **Spring Boot Web Application (Java 21, Spring Boot 4.1, Thymeleaf)** — a single deployable
-   monolith that renders the Thymeleaf UI, enforces server-side role-based access control and BCrypt
+1. **Spring Boot Web Application (Java 21, Spring Boot 4.1, Thymeleaf)** — a single deployable
+   monolith that renders the HTML pages for all roles, keeping core workflows (search, checkout,
+   return, renew, reserve) reachable within three clicks (`NFR-08`), enforces server-side role-based access control and BCrypt
    password hashing (`NFR-01`), executes transactional business rules in the service layer
    (`NFR-03`, `NFR-06`), runs the internal daily **Scheduler** (`FR-18`, `FR-24`, `FR-31`), and
    houses the **Notification Adapter** that persists simulated email notices directly to the database.
-3. **PostgreSQL Database** — the sole persistent data store, managed through versioned Flyway
+2. **PostgreSQL Database** — the sole persistent data store, managed through versioned Flyway
    migrations (`NFR-04`). It enforces relational integrity (including the single-active-loan-per-copy
    constraint, `NFR-03`) and stores audit fields for circulation and financial actions (`NFR-09`).
 
@@ -52,7 +53,7 @@ The system is structured into three logical containers:
 pipeline while keeping UI, validation, and Spring Security tightly integrated. PostgreSQL provides
 strict ACID transactions, partial unique indexes (`NFR-03`), Flyway compatibility (`NFR-04`), and
 realistic integration testing via Testcontainers (`NFR-07`). See the full rationale in
-[§5–6](#5-technology-decisions).
+[§5–6](#5-technology-choices).
 
 ---
 
@@ -79,8 +80,18 @@ strict three-tier **layered architecture** (`Controller → Service → Reposito
 | `circulation` | Checkouts, returns, overdue scheduler, lost copies, renewals (`FR-13`–`FR-21`) | Planned (`v0.3.0`–`v0.5.0`) |
 | `reservation` | FIFO reservation queues, hold readiness, hold-expiry scheduler (`FR-22`–`FR-26`) | Planned (`v0.6.0`) |
 | `fine` | Overdue/lost fine calculation, simulated payments, waivers (`FR-27`–`FR-30`) | Planned (`v0.7.0`) |
-| `notification` | Due-soon/overdue/ready notifications and simulated email adapter (`FR-23`, `FR-31`) | Planned (`v0.8.0`) |
-| `report` | Borrowing history, circulation/fine reports, CSV export, lending policy (`FR-32`–`FR-34`) | Planned (`v0.8.0`) |
+| `notification` | Creates and shows due-soon, overdue and hold-ready notifications; simulated email adapter (`FR-31`). Hold-ready notices are requested by `reservation` (`FR-23`). | Planned (`v0.8.0`) |
+| `report` | Borrowing history, circulation/fine reports, CSV export (`FR-32`, `FR-33`) | Planned (`v0.8.0`) |
+| `config` | `LendingPolicy` values BR-01–BR-06, BR-09, BR-10 (read by circulation, reservation, fine); admin editing (`FR-34`) | Policy from `v0.3.0`; admin UI `v0.8.0` |
+
+### Key dependencies between packages
+
+Services call each other only in the directions shown in the component diagram:
+`circulation` → `catalog` (copy status), `member` (eligibility), `reservation` (allocate a hold on
+return, `FR-23`), `fine` (overdue/lost fines) and `config` (policy); `reservation` → `notification`
+(hold-ready notice) and `config`; `fine` → `config`; `member` → `security` (creates the `MEMBER`
+account, `FR-07`). Hold allocation is a reservation responsibility; `notification` never decides
+business outcomes, it only records and shows messages.
 
 ---
 
@@ -121,3 +132,5 @@ PostgreSQL integration tests without requiring a manually started database (`NFR
 | 2026-11-19 | PostgreSQL in all environments (no embedded H2); Testcontainers for tests; Docker Compose for local run | Same DB engine everywhere avoids dialect surprises; realistic deployment view | C4 L2, deployment |
 | 2026-11-19 | Business rules BR-01–BR-10 stored as configuration (`library.policy.*`) | Change policy without code changes (A6, FR-34) | class-domain |
 | 2026-11-19 | Package-by-feature: `catalog`, `member`, `security`, `circulation`, `reservation`, `fine`, `notification`, `report` | Each increment maps to one package; easy traceability | component |
+| 2026-11-21 | Added `config` package for `LendingPolicy` (FR-34), stored as a one-row `lending_policy` table seeded from `library.policy.*` defaults | Policy is used by circulation, reservation and fine, so it does not belong in `report`; matches `class-domain` and `erd` (Task D review) | component, class-domain, erd |
+| 2026-11-21 | Hold allocation (FR-23) placed in `reservation`; `notification` only sends the notice | Business decision belongs with the reservation queue (Task B review) | component |

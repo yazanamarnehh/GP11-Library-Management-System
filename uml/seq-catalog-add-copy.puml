@@ -1,0 +1,85 @@
+@startuml seq-catalog-add-copy
+' Sequence diagram — UC-04 Manage copies: add a copy (FR-03) — v0.1.0-design, Task C
+' Includes the duplicate-barcode exception path.
+' Class names must match uml/class-domain.puml (Task D) and uml/component.puml (Task B).
+
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+title Sequence — UC-04 Add a copy to a title (FR-03)
+
+actor Librarian
+participant "Web browser" as Browser
+box "Spring Boot web application — catalog package" #F5F5F5
+  participant "CatalogController" as Ctrl <<controller>>
+  participant "CatalogService" as Svc <<service>>
+  participant "TitleRepository" as TitleRepo <<repository>>
+  participant "BookCopyRepository" as CopyRepo <<repository>>
+end box
+database "PostgreSQL" as DB
+
+Librarian -> Browser : enter barcode and shelf location,\nclick "Add copy"
+Browser -> Ctrl : POST /librarian/titles/{titleId}/copies\n(barcode, shelfLocation)
+activate Ctrl
+Ctrl -> Ctrl : validate form\n(barcode and shelf location not empty)
+
+alt form invalid
+  Ctrl --> Browser : form + "Barcode and shelf location are required"
+else form valid
+  Ctrl -> Svc : addCopy(titleId, barcode, shelfLocation)
+  activate Svc
+  note right of Svc : @Transactional —\nall steps succeed or none are saved
+
+  Svc -> TitleRepo : findById(titleId)
+  activate TitleRepo
+  TitleRepo -> DB : SELECT * FROM title WHERE id = ?
+  DB --> TitleRepo : row / none
+  TitleRepo --> Svc : Optional<Title>
+  deactivate TitleRepo
+
+  alt title not found or inactive
+    Svc --> Ctrl : throw TitleNotFoundException
+    Ctrl --> Browser : error page "Title not found"
+  else title found
+    Svc -> CopyRepo : existsByBarcode(barcode)
+    activate CopyRepo
+    CopyRepo -> DB : SELECT COUNT(*) FROM book_copy WHERE barcode = ?
+    DB --> CopyRepo : count
+    CopyRepo --> Svc : true / false
+    deactivate CopyRepo
+
+    alt barcode already exists (exception path)
+      Svc --> Ctrl : throw DuplicateBarcodeException
+      Ctrl --> Browser : form + "Barcode already in use"\n(nothing saved)
+    else barcode is new
+      Svc -> Svc : copy = new BookCopy(title, barcode,\nshelfLocation, status = AVAILABLE)
+      Svc -> CopyRepo : save(copy)
+      activate CopyRepo
+      CopyRepo -> DB : INSERT INTO book_copy (...)
+      DB --> CopyRepo : ok (UNIQUE(barcode) also enforced)
+      CopyRepo --> Svc : saved BookCopy
+      deactivate CopyRepo
+      Svc --> Ctrl : BookCopy
+      Ctrl --> Browser : redirect to /catalog/titles/{titleId}\n+ "Copy added"
+    end
+  end
+  deactivate Svc
+end
+deactivate Ctrl
+
+Browser --> Librarian : show title details with new copy\n(or the error message)
+
+note over Librarian, Browser
+  From v0.2.0 Spring Security allows this
+  URL only for role LIBRARIAN (NFR-01).
+end note
+
+note right of DB
+  The database UNIQUE constraint on barcode is a
+  safety net if two librarians add the same barcode
+  at the same moment; it also ends in
+  "Barcode already in use".
+end note
+
+@enduml
