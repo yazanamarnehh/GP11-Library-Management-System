@@ -38,7 +38,9 @@ Requires JDK 21+.
 
 | Diagram | Description |
 |---|---|
-| _TBD_ | _Added from the first design checkpoint (see `uml/`)_ |
+| [Domain class diagram](uml/class-domain.puml) | Principal domain classes, enums, associations and multiplicities |
+| [ERD](uml/erd.puml) | PostgreSQL tables, keys, unique constraints and audit columns |
+| [BookCopy state diagram](uml/state-book-copy.puml) | Lifecycle of a copy (`AVAILABLE` … `WITHDRAWN`) with FR-labelled transitions |
 
 ## Repository structure
 
