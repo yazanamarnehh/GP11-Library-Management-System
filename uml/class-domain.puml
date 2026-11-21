@@ -213,7 +213,7 @@ Title "1" *-- "0..*" BookCopy : has >
 BookCopy ..> CopyStatus
 
 ' ---------- Accounts ----------
-Member "1" -- "1" UserAccount : logs in with >
+Member "0..1" -- "1" UserAccount : logs in with >
 UserAccount ..> Role
 
 ' ---------- Circulation ----------

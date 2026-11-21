@@ -39,7 +39,7 @@ additions that the glossary does not define: `FineType` (`OVERDUE`, `LOST`) and 
 | `Title` — `BookCopy` | 1 — 0..* (composition) | A title may have no copies yet (FR-01 before FR-03); a copy cannot exist without its title and is created through it (FR-03). |
 | `Title` — `Author` | * — 1..* | Glossary: a title has one or more authors; an author may write many titles (FR-01). Realised by table `title_author`. |
 | `Title` — `Category` | * — 1 | FR-01 requires exactly one category; many titles share it (FR-05 search by category). |
-| `Member` — `UserAccount` | 1 — 1 | FR-07 creates a `MEMBER` account with every member. Staff accounts (`LIBRARIAN`, `ADMIN`) have no `Member`, so in the database the link is on `member.user_account_id`. |
+| `Member` — `UserAccount` | 0..1 — 1 | FR-07 creates a `MEMBER` account with every member. Staff accounts (`LIBRARIAN`, `ADMIN`) have no `Member`, so in the database the link is on `member.user_account_id`. |
 | `Member` — `Loan` | 1 — 0..* | A member has any number of loans over time; only 5 may be active (BR-02, checked in the service layer). |
 | `BookCopy` — `Loan` | 1 — 0..* | A copy is lent many times over its life, but at most one loan is active at a time (NFR-03, partial unique index). |
 | `Member` — `Reservation` | 1 — 0..* | Reservation history is kept; at most 3 active (BR-09, service layer). |
