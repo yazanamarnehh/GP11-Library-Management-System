@@ -1,0 +1,24 @@
+@startuml c4-context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context Diagram (C4 Level 1) — GP11 Library Management System
+
+Person(guest, "Guest", "Unauthenticated visitor browsing the public catalog.")
+Person(member, "Member", "Registered library patron with an active account.")
+Person(librarian, "Librarian", "Library staff managing catalog, members, circulation, fines, and reports.")
+Person(admin, "Administrator", "System administrator managing staff accounts and lending policy.")
+
+System(lms, "Library Management System", "Spring Boot web application for catalog search, member management, borrowing, returns, renewals, reservations, fines, notifications, and reporting.")
+
+System_Ext(email, "Email Service (Simulated)", "Simulated outbound notification channel. Notifications are stored in the database and displayed on member dashboards rather than sent via live SMTP.")
+
+Rel(guest, lms, "Searches active titles and views copy availability", "HTTPS / Web UI (FR-05, FR-06)")
+Rel(member, lms, "Searches catalog, views loans/fines/history, renews loans, manages reservations, changes password", "HTTPS / Web UI (FR-05, FR-06, FR-09, FR-12, FR-15, FR-21, FR-22, FR-25, FR-30, FR-32)")
+Rel(librarian, lms, "Manages titles, copies, and members; checks out/returns/renews copies; records or waives fines; views and exports reports", "HTTPS / Web UI (FR-01..FR-04, FR-07..FR-10, FR-13, FR-16..FR-21, FR-26, FR-29, FR-33)")
+Rel(admin, lms, "Creates/disables staff accounts and updates lending policy values", "HTTPS / Web UI (FR-09, FR-11, FR-34)")
+
+Rel(lms, email, "Dispatches due-soon, overdue, and reservation-ready notices (simulated via DB persistence)", "Internal Notification Adapter (FR-23, FR-31)")
+
+@enduml
