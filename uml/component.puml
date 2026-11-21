@@ -17,7 +17,7 @@ package "Cross-Cutting Security" {
     }
 }
 
-package "Feature Packages (Controller -> Service -> Repository, NFR-06)" {
+package "Feature Packages (Controller -> Service -> Repository, NFR-06)" as pkg_features {
 
     package "catalog [v0.1.0]" as pkg_catalog {
         [CatalogController\n(FR-01..FR-06)] as cat_ctrl
@@ -98,14 +98,7 @@ res_svc ..> pol_svc : hold period (BR-06, BR-09)
 fine_svc ..> pol_svc : fine rate (BR-04, BR-05)
 
 ' ---------- Cross-cutting security ----------
-sec_cfg ..> pkg_catalog : enforces RBAC
-sec_cfg ..> pkg_member : enforces RBAC
-sec_cfg ..> pkg_circ : enforces RBAC
-sec_cfg ..> pkg_res : enforces RBAC
-sec_cfg ..> pkg_fine : enforces RBAC
-sec_cfg ..> pkg_notif : enforces RBAC
-sec_cfg ..> pkg_rep : enforces RBAC
-sec_cfg ..> pkg_config : enforces RBAC
+sec_cfg ..> pkg_features : enforces RBAC on every request (all packages)
 
 cat_repo --> pg
 mem_repo --> pg
