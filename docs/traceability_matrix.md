@@ -7,12 +7,12 @@ branch that changes its status.
 | Requirement ID | Use Case / Design Element | Increment / Version | Implementation Module(s) | Test(s) | Status |
 |---|---|---|---|---|---|
 | — | Health endpoint (technical, bootstrap) | v0.0.0 | `src/main/java/edu/psut/se/gp11/library/health/HealthController.java` | `tests/java/edu/psut/se/gp11/library/health/HealthControllerTest.java` | Verified |
-| FR-01 | UC Manage titles; `Title`, `Author`, `Category`; `class-domain`, `erd` | v0.1.0 | planned: `catalog` | planned | Planned |
-| FR-02 | UC Manage titles; `Title` | v0.1.0 | planned: `catalog` | planned | Planned |
-| FR-03 | UC Manage copies; `BookCopy`; `class-domain`, `erd`, `state-book-copy` | v0.1.0 | planned: `catalog` | planned | Planned |
-| FR-04 | UC Manage copies; `state-book-copy` | v0.1.0 | planned: `catalog` | planned | Planned |
-| FR-05 | UC Search catalog; `seq-catalog-search` | v0.1.0 | planned: `catalog` | planned | Planned |
-| FR-06 | UC View title details | v0.1.0 | planned: `catalog` | planned | Planned |
+| FR-01 | UC-03 Manage titles; `Title`, `Author`, `Category`; `class-domain`, `erd`, `component` | v0.1.0 | planned: `catalog` (`CatalogController`, `CatalogService`, `TitleRepository`) | planned | Designed (v0.1.0-design) |
+| FR-02 | UC-03 Manage titles; `Title.canDeactivate()`; `class-domain`, `component` | v0.1.0 | planned: `catalog` (`CatalogService`, `TitleRepository`) | planned | Designed (v0.1.0-design) |
+| FR-03 | UC-04 Manage copies; `BookCopy`; `class-domain`, `erd`, `state-book-copy`, `seq-catalog-add-copy` | v0.1.0 | planned: `catalog` (`CatalogService`, `BookCopyRepository`) | planned | Designed (v0.1.0-design) |
+| FR-04 | UC-04 Manage copies; `state-book-copy` | v0.1.0 | planned: `catalog` (`CatalogService`, `BookCopy.changeStatus()`) | planned | Designed (v0.1.0-design) |
+| FR-05 | UC-01 Search catalog; `seq-catalog-search`, `Title.availableCopyCount()` | v0.1.0 | planned: `catalog` (`CatalogController`, `CatalogService`, `TitleRepository`) | planned | Designed (v0.1.0-design) |
+| FR-06 | UC-02 View title details; `Title`, `BookCopy` | v0.1.0 | planned: `catalog` (`CatalogController`, `CatalogService`) | planned | Designed (v0.1.0-design) |
 | FR-07 | UC Register member; `Member`, `UserAccount`; `class-domain`, `erd` | v0.2.0 | planned: `member` | planned | Planned |
 | FR-08 | UC Manage member | v0.2.0 | planned: `member` | planned | Planned |
 | FR-09 | UC Log in; `UserAccount`, `Role`; `class-domain`, `erd` | v0.2.0 | planned: `security` | planned | Planned |
