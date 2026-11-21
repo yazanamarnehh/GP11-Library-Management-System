@@ -66,6 +66,7 @@ Requires JDK 21+.
 | Version | Capability introduced |
 |---|---|
 | v0.0.0 | Repository bootstrap (structure, Spring Boot skeleton, Claude rules) — not tagged |
+| v0.1.0-design | System analysis and Catalog design: requirements FR-01–FR-34, NFR, BR; increment plan to v1.0.0; C4 L1/L2, component view, use cases, domain class diagram, ERD, BookCopy state diagram, catalog sequence diagrams |
 
 Full plan: [docs/incremental_development_plan.md](docs/incremental_development_plan.md)
 
