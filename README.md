@@ -12,9 +12,9 @@
 | Student name | Student ID |
 |---|---|
 | Yazan | 20230665 |
-| _TBD_ | _TBD_ |
-| _TBD_ | _TBD_ |
-| _TBD_ | _TBD_ |
+| bashar  | 20230318 |
+| ibrahim | 20230761 |
+| abdalrahman | 20210833 |
 
 ## Project overview
 
@@ -38,7 +38,15 @@ Requires JDK 21+.
 
 | Diagram | Description |
 |---|---|
-| _TBD_ | _Added from the first design checkpoint (see `uml/`)_ |
+| [C4 System Context](uml/c4-context.puml) | High-level actors (Guest, Member, Librarian, Admin) and simulated Email Service |
+| [C4 Container](uml/c4-container.puml) | Spring Boot/Thymeleaf web application (with internal scheduler) and PostgreSQL |
+| [Component View](uml/component.puml) | Feature packages with Controller → Service → Repository layers, key dependencies and cross-cutting security |
+| [Use case diagram](uml/use-case.puml) (3 pages) | All actors and use cases UC-01–UC-32 with include/extend; descriptions in [docs/use_cases.md](docs/use_cases.md) |
+| [Sequence: catalog search](uml/seq-catalog-search.puml) | Guest searches the catalog; controller → service → repository → PostgreSQL (FR-05) |
+| [Sequence: add copy](uml/seq-catalog-add-copy.puml) | Librarian adds a copy, including the duplicate-barcode error (FR-03) |
+| [Domain class diagram](uml/class-domain.puml) | Principal domain classes, enums, associations and multiplicities |
+| [ERD](uml/erd.puml) | PostgreSQL tables, keys, unique constraints and audit columns |
+| [BookCopy state diagram](uml/state-book-copy.puml) | Lifecycle of a copy (`AVAILABLE` … `WITHDRAWN`) with FR-labelled transitions |
 
 ## Repository structure
 
@@ -58,6 +66,7 @@ Requires JDK 21+.
 | Version | Capability introduced |
 |---|---|
 | v0.0.0 | Repository bootstrap (structure, Spring Boot skeleton, Claude rules) — not tagged |
+| v0.1.0-design | System analysis and Catalog design: requirements FR-01–FR-34, NFR, BR; increment plan to v1.0.0; C4 L1/L2, component view, use cases, domain class diagram, ERD, BookCopy state diagram, catalog sequence diagrams |
 
 Full plan: [docs/incremental_development_plan.md](docs/incremental_development_plan.md)
 

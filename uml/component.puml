@@ -1,0 +1,119 @@
+@startuml component
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam shadowing false
+top to bottom direction
+
+title Component View — Spring Boot Web Application (edu.psut.se.gp11.library)
+
+package "Cross-Cutting Security" {
+    package "security [planned v0.2.0]" as pkg_security {
+        [SecurityConfig & AuthFilter\n(NFR-01: BCrypt + RBAC)] as sec_cfg
+        [AuthController\n(FR-09, FR-11, FR-12)] as sec_ctrl
+        [UserAccountService] as sec_svc
+        [UserAccountRepository] as sec_repo
+        sec_ctrl --> sec_svc
+        sec_svc --> sec_repo
+    }
+}
+
+package "Feature Packages (Controller -> Service -> Repository, NFR-06)" as pkg_features {
+
+    package "catalog [v0.1.0]" as pkg_catalog {
+        [CatalogController\n(FR-01..FR-06)] as cat_ctrl
+        [CatalogService] as cat_svc
+        [TitleRepository /\nBookCopyRepository] as cat_repo
+        cat_ctrl --> cat_svc
+        cat_svc --> cat_repo
+    }
+
+    package "member [planned v0.2.0]" as pkg_member {
+        [MemberController\n(FR-07, FR-08, FR-10)] as mem_ctrl
+        [MemberService] as mem_svc
+        [MemberRepository] as mem_repo
+        mem_ctrl --> mem_svc
+        mem_svc --> mem_repo
+    }
+
+    package "circulation [planned v0.3.0-v0.5.0]" as pkg_circ {
+        [CirculationController\n(FR-13..FR-21)] as circ_ctrl
+        [LoanService &\nOverdueScheduler] as circ_svc
+        [LoanRepository] as circ_repo
+        circ_ctrl --> circ_svc
+        circ_svc --> circ_repo
+    }
+
+    package "reservation [planned v0.6.0]" as pkg_res {
+        [ReservationController\n(FR-22..FR-26)] as res_ctrl
+        [ReservationService &\nHoldExpiryScheduler\n(allocates holds, FR-23)] as res_svc
+        [ReservationRepository] as res_repo
+        res_ctrl --> res_svc
+        res_svc --> res_repo
+    }
+
+    package "fine [planned v0.7.0]" as pkg_fine {
+        [FineController\n(FR-27..FR-30)] as fine_ctrl
+        [FineService] as fine_svc
+        [FineRepository /\nPaymentRepository] as fine_repo
+        fine_ctrl --> fine_svc
+        fine_svc --> fine_repo
+    }
+
+    package "notification [planned v0.8.0]" as pkg_notif {
+        [NotificationController\n(FR-31)] as notif_ctrl
+        [NotificationService &\nDueSoonScheduler] as notif_svc
+        [SimulatedNotificationAdapter /\nNotificationRepository] as notif_repo
+        notif_ctrl --> notif_svc
+        notif_svc --> notif_repo
+    }
+
+    package "report [planned v0.8.0]" as pkg_rep {
+        [ReportController\n(FR-32, FR-33)] as rep_ctrl
+        [ReportService] as rep_svc
+        [ReportRepository] as rep_repo
+        rep_ctrl --> rep_svc
+        rep_svc --> rep_repo
+    }
+
+    package "config [policy v0.3.0, admin UI v0.8.0]" as pkg_config {
+        [LendingPolicyController\n(FR-34, ADMIN only)] as pol_ctrl
+        [LendingPolicyService\n(BR-01..BR-06, BR-09, BR-10)] as pol_svc
+        [LendingPolicyRepository] as pol_repo
+        pol_ctrl --> pol_svc
+        pol_svc --> pol_repo
+    }
+}
+
+database "PostgreSQL Database\n(Flyway-managed schema, NFR-04)" as pg
+
+' ---------- Key dependencies between feature packages (service layer) ----------
+mem_svc ..> sec_svc : creates MEMBER account (FR-07)
+circ_svc ..> cat_svc : copy status (FR-13, FR-17)
+circ_svc ..> mem_svc : eligibility (BR-02, BR-05, BR-07)
+circ_svc ..> res_svc : on return: allocate hold (FR-17, FR-23)
+circ_svc ..> fine_svc : overdue / lost fine (FR-27, FR-28)
+res_svc ..> notif_svc : hold ready notice (FR-23)
+circ_svc ..> pol_svc : loan period, renewals (BR-01, BR-03)
+res_svc ..> pol_svc : hold period (BR-06, BR-09)
+fine_svc ..> pol_svc : fine rate (BR-04, BR-05)
+
+' ---------- Cross-cutting security ----------
+sec_cfg ..> pkg_features : enforces RBAC on every request (all packages)
+
+cat_repo --> pg
+mem_repo --> pg
+circ_repo --> pg
+res_repo --> pg
+fine_repo --> pg
+notif_repo --> pg
+rep_repo --> pg
+pol_repo --> pg
+sec_repo --> pg
+
+note bottom of pkg_notif
+  Notification only creates and shows messages.
+  Hold allocation (FR-23) is decided in reservation,
+  which then asks notification to send the notice.
+end note
+
+@enduml
